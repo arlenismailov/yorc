@@ -1,4 +1,12 @@
+import os
+import sys
 import django
+
+# Добавляем путь к проекту в PYTHONPATH
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Добавляем эти строки перед django.setup()
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
 django.setup()
 
 from aiogram import Dispatcher, types, Router
@@ -9,7 +17,7 @@ import logging
 from main.models import Product, TelegramUser
 from asgiref.sync import sync_to_async
 from django.db import connection
-from .bot_instance import bot  # Импортируем бота из bot_instance
+from bot.bot_instance import bot  # Изменили с .bot_instance на bot.bot_instance
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
