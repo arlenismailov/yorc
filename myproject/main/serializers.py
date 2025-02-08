@@ -7,7 +7,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'product', 'content', 'rating', 'created_at']
+        fields = ['id', 'user', 'product', 'content', 'created_at']  # Убрал rating, так как его нет в модели
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -33,10 +33,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = [
-            'id', 'name', 'description', 'price', 'image', 'created_at', 'updated_at',
-            'comments', 'liked_by', 'favorited_by'
-        ]
+        fields = ['id', 'name', 'price', 'description', 'image', 'created_at', 
+                 'comments', 'liked_by', 'favorited_by']  # Добавил все поля
 
 
 class CategorySerializer(serializers.ModelSerializer):
