@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from main.models import Product
+from main.models import Product, Category
 import logging
 from bot.bot_instance import bot  # Импортируем бота из bot_instance
 from asgiref.sync import async_to_sync
@@ -41,23 +41,26 @@ def parse_test_site():
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'lxml')
         
+        # Создаем или получаем категорию по умолчанию
+        default_category, created = Category.objects.get_or_create(name='Default Category')
+        
         for item in soup.find_all('div', class_='card-body'):
             try:
                 title = item.find('a', class_='title').text.strip()
                 price = item.find('h4', class_='price').text.strip().replace('$', '')
                 description = item.find('p', class_='description').text.strip()
                 
-                # Создаем продукт только если его еще нет
-                with connection.cursor() as cursor:
-                    if not Product.objects.filter(name=title).exists():
-                        product = Product.objects.create(
-                            name=title,
-                            price=float(price),
-                            description=description
-                        )
-                        # Отправляем уведомление в Telegram
-                        async_to_sync(send_to_telegram)(product)
-                        logger.info(f"Added new product and sent notification: {title}")
+                # Создаем продукт с категорией
+                product = Product.objects.create(
+                    name=title,
+                    price=float(price),
+                    description=description,
+                    category=default_category  # Добавляем категорию
+                )
+                
+                # Отправляем уведомление в Telegram
+                async_to_sync(send_to_telegram)(product)
+                logger.info(f"Added new product and sent notification: {title}")
                 
             except Exception as e:
                 logger.error(f"Error processing product: {e}")
