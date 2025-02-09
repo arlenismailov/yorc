@@ -5,6 +5,10 @@ import logging
 from bot.bot_instance import bot  # Импортируем бота из bot_instance
 from asgiref.sync import async_to_sync
 from django.db import connection
+from django.core.files.base import ContentFile
+from fake_useragent import UserAgent
+import time
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -31,46 +35,93 @@ async def send_to_telegram(product):
     except Exception as e:
         logger.error(f"Error sending telegram notification: {e}")
 
-def parse_test_site():
-    url = "https://webscraper.io/test-sites/e-commerce/allinone"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-    
+def download_image(url):
     try:
+        ua = UserAgent()
+        headers = {'User-Agent': ua.random}
         response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, 'lxml')
+        if response.status_code == 200:
+            return ContentFile(response.content, name=f"product_{random.randint(1, 99999)}.jpg")
+    except Exception as e:
+        logger.error(f"Error downloading image: {e}")
+    return None
+
+def parse_aliexpress():
+    try:
+        # Создаем категорию для товаров
+        category, _ = Category.objects.get_or_create(name='AliExpress Products')
         
-        # Создаем или получаем категорию по умолчанию
-        default_category, created = Category.objects.get_or_create(name='Default Category')
+        # Список URL для парсинга (можно добавить больше)
+        urls = [
+            'https://aliexpress.ru/category/202000002/women-clothing',
+            'https://aliexpress.ru/category/202000001/men-clothing'
+        ]
         
-        for item in soup.find_all('div', class_='card-body'):
+        ua = UserAgent()
+        headers = {
+            'User-Agent': ua.random,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+        }
+
+        products_created = 0
+        
+        for url in urls:
             try:
-                title = item.find('a', class_='title').text.strip()
-                price = item.find('h4', class_='price').text.strip().replace('$', '')
-                description = item.find('p', class_='description').text.strip()
+                # Добавляем случайную задержку
+                time.sleep(random.uniform(1, 3))
                 
-                # Создаем продукт с категорией
-                product = Product.objects.create(
-                    name=title,
-                    price=float(price),
-                    description=description,
-                    category=default_category  # Добавляем категорию
-                )
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
                 
-                # Отправляем уведомление в Telegram
-                async_to_sync(send_to_telegram)(product)
-                logger.info(f"Added new product and sent notification: {title}")
+                soup = BeautifulSoup(response.text, 'html.parser')
                 
+                # Ищем товары на странице
+                products = soup.find_all('div', class_='product-snippet_ProductSnippet__content__1ettdy')
+                
+                for product in products:
+                    try:
+                        # Извлекаем данные
+                        title = product.find('div', class_='product-snippet_ProductSnippet__name__1ettdy').text.strip()
+                        price_elem = product.find('div', class_='snow-price_SnowPrice__mainM__18s9w6')
+                        price = float(price_elem.text.strip().replace('₽', '').replace(' ', '')) if price_elem else 0
+                        img = product.find('img')
+                        img_url = img['src'] if img else None
+                        
+                        # Проверяем, существует ли уже такой продукт
+                        if not Product.objects.filter(name=title).exists():
+                            # Скачиваем изображение
+                            image_content = download_image(img_url) if img_url else None
+                            
+                            # Создаем продукт
+                            product = Product.objects.create(
+                                name=title,
+                                price=price,
+                                description=f"Товар из категории {category.name}",
+                                category=category
+                            )
+                            
+                            if image_content:
+                                product.image.save(image_content.name, image_content, save=True)
+                            
+                            products_created += 1
+                            logger.info(f"Created product: {title}")
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing product: {e}")
+                        continue
+                        
             except Exception as e:
-                logger.error(f"Error processing product: {e}")
+                logger.error(f"Error processing URL {url}: {e}")
                 continue
                 
-        return "Parsing completed successfully!"
+        return f"Successfully created {products_created} products!"
         
     except Exception as e:
-        logger.error(f"Error during parsing: {e}")
-        return f"Error: {e}"
+        error_msg = f"Error during parsing: {e}"
+        logger.error(error_msg)
+        return error_msg
 
 def save_to_db(products):
     for product in products:
@@ -88,6 +139,6 @@ def save_to_db(products):
 
 def run_parser():
     print("Starting parser...")
-    result = parse_test_site()
+    result = parse_aliexpress()
     print(result)
     print("Parsing completed!")

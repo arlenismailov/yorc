@@ -137,13 +137,20 @@ REST_FRAMEWORK = {
         'knox.auth.TokenAuthentication',
     ],
 }
+FRONTEND_URL = 'http://localhost:3000'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Для разработки
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'bekturkochorbaev64@gmail.com'
-EMAIL_HOST_PASSWORD = 'diwd chov wdrx wepj'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'bekturkochorbaev64@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'diwd chov wdrx wepj')
+
+
+
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
@@ -185,3 +192,81 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Настройки логирования
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/debug.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'main': {  # логгер для нашего приложения
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+# Настройки кэширования
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Время кэширования по умолчанию (5 минут)
+CACHE_TTL = 60 * 5
+
+
+
+
+
+
+# ... существующий код ...
+
+# Redis settings
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+
+# Celery settings
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+
+# Channels settings
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [REDIS_URL],
+        },
+    },
+}

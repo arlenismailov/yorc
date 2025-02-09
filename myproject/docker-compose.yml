@@ -1,21 +1,143 @@
+version: '3'
+
 services:
   web:
-    build: .
-    ports:
-      - "8000:8000"
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: >
+      bash -c "python manage.py collectstatic --noinput && 
+              python manage.py makemigrations && 
+              python manage.py migrate && 
+              gunicorn -b 0.0.0.0:8000 myproject.wsgi:application"
     volumes:
       - .:/app
-    environment:
-      - DEBUG=1
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  daphne:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: daphne -b 0.0.0.0 -p 8001 myproject.asgi:application
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: always
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A myproject worker -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: always
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A myproject beat -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: always
+
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: python bot/telegram_bot.py
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      web:
+        condition: service_started
+    restart: always
+
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   redis:
-    image: redis:6
+    image: redis:latest
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - web
+      - daphne
+    restart: always
 
 volumes:
   postgres_data:
-  static_volume:
   media_volume:
+  static_volume: 

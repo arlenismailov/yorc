@@ -19,11 +19,9 @@ class LikeSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField(read_only=True)  # Отображаем имя пользователя
-
     class Meta:
         model = Favorite
-        fields = ['id', 'user', 'created_at']
+        fields = ['id', 'product', 'created_at']
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -43,3 +41,12 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'products']
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True)
