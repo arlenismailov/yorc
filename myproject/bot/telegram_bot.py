@@ -17,10 +17,13 @@ import logging
 from main.models import Product, TelegramUser
 from asgiref.sync import sync_to_async
 from django.db import connection
-from bot.bot_instance import bot  # Изменили с .bot_instance на bot.bot_instance
+from bot.bot_instance import bot
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
+# Улучшенная настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Инициализация бота и диспетчера
@@ -30,8 +33,12 @@ router = Router()
 # Функция для работы с базой данных
 @sync_to_async
 def get_products(limit=5):
-    with connection.cursor() as cursor:
-        return list(Product.objects.all().order_by('-id')[:limit])
+    try:
+        with connection.cursor() as cursor:
+            return list(Product.objects.all().order_by('-id')[:limit])
+    except Exception as e:
+        logger.error(f"Database error in get_products: {e}")
+        return []
 
 # Команда /start
 @router.message(Command("start"))
@@ -50,6 +57,7 @@ async def cmd_start(message: types.Message):
             'Я бот для просмотра товаров.\n'
             'Нажми /products чтобы увидеть последние товары'
         )
+        logger.info(f"User {user_id} ({username}) started the bot")
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         await message.answer("Произошла ошибка при запуске бота 😔")
@@ -69,18 +77,25 @@ async def cmd_products(message: types.Message):
                 f"💰 Цена: ${product.price}\n"
                 f"📝 {product.description[:100] if product.description else ''}"
             )
+        logger.info(f"User {message.from_user.id} requested products list")
     except Exception as e:
         logger.error(f"Error in products command: {e}")
         await message.answer("Произошла ошибка при получении товаров 😔")
 
 # Запуск бота
 async def main():
-    dp.include_router(router)
-    logger.info("Starting bot...")
-    await dp.start_polling(bot)
+    try:
+        dp.include_router(router)
+        logger.info("Starting bot...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
 
 def run_bot():
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        logger.error(f"Critical error in run_bot: {e}")
 
 if __name__ == '__main__':
     run_bot()

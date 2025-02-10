@@ -88,11 +88,11 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'postgres'),
-        'USER': os.getenv('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres'),
-        'HOST': os.getenv('POSTGRES_HOST', 'db'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'NAME': os.getenv('DB_NAME', 'postgres'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -157,12 +157,13 @@ REST_FRAMEWORK = {
 }
 FRONTEND_URL = 'http://localhost:3000'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Для разработки
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Меняем на SMTP бэкенд
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'bekturkochorbaev64@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'diwd chov wdrx wepj')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Добавьте эту строку
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
@@ -271,10 +272,10 @@ if 'test' in sys.argv:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'test_db'),
-            'USER': os.getenv('DB_USER', 'test_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'test_password'),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'NAME': os.getenv('DB_NAME', 'myproject_db'),
+            'USER': os.getenv('DB_USER', 'myproject_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'SuperSecretPassword123'),
+            'HOST': os.getenv('DB_HOST', 'db'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
     }

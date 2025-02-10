@@ -25,10 +25,11 @@ services:
       - media_volume:/app/media
     environment:
       - DJANGO_SETTINGS_MODULE=myproject.settings.production
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
       - SECRET_KEY=${SECRET_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -69,10 +70,11 @@ services:
     command: celery -A myproject worker -l info
     environment:
       - DJANGO_SETTINGS_MODULE=myproject.settings.production
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
       - REDIS_HOST=redis
     depends_on:
       - db
@@ -86,10 +88,11 @@ services:
     command: celery -A myproject beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
       - DJANGO_SETTINGS_MODULE=myproject.settings.production
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
       - REDIS_HOST=redis
     depends_on:
       web:
@@ -109,6 +112,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - DJANGO_SETTINGS_MODULE=myproject.settings.production
     depends_on:
+      - db
       - web
     restart: unless-stopped
 
@@ -149,7 +153,6 @@ services:
     depends_on:
       - web
     restart: unless-stopped
-
 
 volumes:
   postgres_data:
