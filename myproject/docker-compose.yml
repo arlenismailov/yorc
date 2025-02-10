@@ -7,11 +7,18 @@ services:
       dockerfile: docker/Dockerfile
     command: >
       bash -c "
-        python manage.py collectstatic --noinput &&
-        python manage.py makemigrations &&
+        mkdir -p /app/static &&
+        mkdir -p /app/staticfiles &&
+        python manage.py collectstatic --noinput --clear &&
+        python manage.py makemigrations django_celery_beat &&
         python manage.py migrate django_celery_beat --noinput &&
+        python manage.py makemigrations django_celery_results &&
+        python manage.py migrate django_celery_results --noinput &&
+        python manage.py makemigrations &&
         python manage.py migrate --noinput &&
         gunicorn myproject.wsgi:application -b 0.0.0.0:8000 -w 4"
+    ports:
+      - "8000:8000"    
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
@@ -133,15 +140,16 @@ services:
 
   nginx:
     image: nginx:1.25-alpine
-    volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
     depends_on:
       - web
     restart: unless-stopped
+
 
 volumes:
   postgres_data:

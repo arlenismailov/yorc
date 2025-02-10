@@ -22,11 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -36,7 +37,8 @@ INSTALLED_APPS = [
     
     # Channels должен быть перед вашими приложениями
     'channels',
-    'daphne',
+    'django_celery_beat',
+    'django_celery_results',
     
     # Остальные приложения...
     'rest_framework',
@@ -44,8 +46,6 @@ INSTALLED_APPS = [
     'knox',
     'drf_yasg',
     'accounts',
-    'django_celery_beat',
-    'django_celery_results',
     'main',
     'django_rest_passwordreset',
     'django_filters',
@@ -129,9 +129,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR.parent, 'staticfiles')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR.parent, 'static'),
+]
+
+# Добавьте эти настройки
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
 # Media files settings
@@ -147,6 +153,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'knox.auth.TokenAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
 FRONTEND_URL = 'http://localhost:3000'
 
@@ -283,3 +290,22 @@ if 'test' in sys.argv:
 
     # Отключаем CSRF в тестах
     MIDDLEWARE = [m for m in MIDDLEWARE if 'CSRFMiddleware' not in m]
+
+# Swagger settings
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'VALIDATOR_URL': None,
+    'OPERATIONS_SORTER': 'alpha',
+    'DEFAULT_INFO': 'myproject.urls.swagger_info',
+    'STATIC_URL': STATIC_URL,
+    'PERSIST_AUTH': True,
+    'REFETCH_SCHEMA_WITH_AUTH': True,
+    'REFETCH_SCHEMA_ON_LOGOUT': True,
+}

@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV DJANGO_SETTINGS_MODULE=myproject.settings.production
 
 WORKDIR /app
 
@@ -13,20 +14,17 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка зависимостей Python
+# Копирование requirements.txt
 COPY requirements.txt .
+
+# Установка зависимостей Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Явная установка daphne и gunicorn
-RUN pip install --no-cache-dir \
-    daphne \
-    gunicorn
+# Создание необходимых директорий
+RUN mkdir -p /app/staticfiles /app/media /app/static
 
 # Копирование проекта
 COPY . .
-
-# Создание необходимых директорий
-RUN mkdir -p /app/staticfiles /app/media /app/logs
 
 # Установка прав
 RUN chmod +x /app/bot/telegram_bot.py
