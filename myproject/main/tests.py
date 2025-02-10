@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from .models import Product, Category, Comment, Like, Favorite
 from faker import Faker
 import random
+from django.contrib.auth.models import User
 
 User = get_user_model()
 fake = Faker('ru_RU')
@@ -130,3 +131,28 @@ class ProductAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(len(response.data) > 0)
         self.assertTrue('Особый продукт' in [p['name'] for p in response.data])
+
+class AuthenticationTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+
+    def test_login(self):
+        url = reverse('knox_login')
+        data = {
+            'username': 'testuser',
+            'password': 'testpass123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+class APIEndpointsTest(APITestCase):
+    def setUp(self):
+        # Настройка тестовых данных
+        pass
+
+    def test_endpoint(self):
+        # Тест API endpoint
+        pass
